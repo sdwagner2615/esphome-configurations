@@ -1,6 +1,6 @@
 # Originally forked from EP1's ESPHome build workflow as of 2025-08-10:
 # https://github.com/EverythingSmartHome/everything-presence-lite/blob/a760bb316415b1451f6f758ba52b0f2e3b96eb28/.github/workflows/esphome-build.yml
-name: Build/Refresh ESPHome firmware
+name: Workflow - Build/Refresh ESPHome firmware
 
 on:
   workflow_call:
@@ -49,7 +49,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   build:
-    name: Build ESPHome binary for ${{ matrix.file }}
+    name: build binary for ${{ matrix.file }}
     needs: [prepare, get-latest-versions]
     runs-on: ubuntu-latest
     strategy:
