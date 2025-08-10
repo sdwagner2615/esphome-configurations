@@ -1,0 +1,144 @@
+# Originally forked from EP1's ESPHome build workflow as of 2025-08-10:
+# https://github.com/EverythingSmartHome/everything-presence-lite/blob/a760bb316415b1451f6f758ba52b0f2e3b96eb28/.github/workflows/esphome-build.yml
+name: Build/Refresh ESPHome firmware
+
+on:
+  workflow_call:
+    inputs:
+      files:
+        description: Comma-separated list of files to build.
+        required: true
+        type: string
+      clean:
+        description: Remove deleted files from the build
+        required: false
+        type: boolean
+        default: true
+      esphome_version:
+        description: Version of ESPHome to build for.
+        required: false
+        type: string
+        default: latest  # By default, use the latest version of ESPHome.
+
+jobs:
+  # Split the comma-seperated input string into an array
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.files-array.outputs.files }}
+    steps:
+      - id: files-array
+        run: |
+          files=$(echo "${{ inputs.files }}" | jq -Rcn 'inputs | . / ","')
+          echo ::set-output name=files::$files
+
+  get-latest-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      esphome-version: ${{ steps.esphome-version.outputs.esphome_version }}
+    steps:
+      - id: esphome-version
+        run: |
+          if [ "${{ inputs.esphome_version }}" = "latest" ]; then
+            latest=$(gh api repos/esphome/esphome/releases/latest --jq .tag_name)
+            echo "esphome_version=$latest" >> $GITHUB_OUTPUT
+          else
+            echo "esphome_version=${{ inputs.esphome_version }}" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  build:
+    name: Build ESPHome binary for ${{ matrix.file }}
+    needs: [prepare, get-latest-versions]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        file: ${{ fromJson(needs.prepare.outputs.files) }}
+    outputs:
+      esphome-version: ${{ steps.esphome-build.outputs.esphome-version }}
+      esphome-build-name: ${{ steps.esphome-build.outputs.name}}
+      project-version: ${{ steps.esphome-build.outputs.project-version }}
+      base_name: ${{ steps.set-names.outputs.name }}
+      directory_name: ${{ steps.set-names.outputs.directory_name }}
+    steps:
+      - uses: actions/checkout@v3.5.3
+      - uses: esphome/build-action@v6
+        id: esphome-build
+        with:
+          yaml-file: ${{ matrix.file }}
+          version: ${{ needs.get-latest-versions.outputs.esphome-version }}
+      - id: set-names
+        run: |
+          base=$(basename "${{ matrix.file }}" .yaml)
+          echo "directory_name=$base" >> $GITHUB_OUTPUT
+          echo "base_name=$base" >> $GITHUB_OUTPUT
+      - run: |
+          mkdir output
+          mv "${{ steps.esphome-build.outputs.base_name}}" temp
+          mv temp "${{ steps.set-names.outputs.directory_name }}"
+          mv "${{ steps.set-names.outputs.directory_name }}" output/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.set-names.outputs.base_name }}
+          path: output
+
+  check-and-tag:
+    runs-on: ubuntu-latest
+    needs: [build, get-latest-versions]
+    outputs:
+      tag-exists: ${{ steps.check-and-tag.outputs.exists }}
+    steps:
+      - id: check-and-tag
+        run: |
+          tag="${{ needs.build.outputs.project-version }}-${{ needs.get-latest-versions.outputs.esphome-version }}"
+          if git ls-remote --tags origin | grep -q "refs/tags/$tag$"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git config --global user.name "github-actions[bot]"
+            git fetch --tags
+            git tag "$tag"
+            git push origin "$tag"
+          fi
+
+  publish:
+    if: needs.check-and-tag.outputs.tag-exists == 'false' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main'
+    name: Publish new firmware and website to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [build, check-and-tag]
+    steps:
+      - uses: actions/checkout@v3.5.3
+      - uses: actions/download-artifact@v4
+        with:
+          path: output
+          name: ${{ needs.build.outputs.base_name}}
+
+      - name: Create single manifest.json
+        run: |
+          # Create the merged manifest:
+          jq -s '{"name": "${{ needs.build.outputs.base_name }}", "version": "${{ needs.build.outputs.project-version }}", "home_assistant_domain": "esphome", "new_install_skip_erase": false, "builds":.}' output/*/manifest.json \
+            > output/${{ needs.build.outputs.base_name }}.json
+      
+          # Rewrite .path using jq to add unique directory to manifest
+          jq --arg dir "${{ needs.build.outputs.directory_name }}" '
+            .builds[].ota.path |= "\($dir)/\(.)" |
+            .builds[].parts[].path |= "\($dir)/\(.)"
+          ' \
+            output/${{ needs.build.outputs.base_name }}.json \
+            > output/manifest_temp.json
+      
+          mv output/manifest_temp.json output/${{ needs.build.outputs.base_name }}.json
+
+
+      - run: cp -R static/* output
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: output
+          clean: ${{ inputs.clean }}
+          force: false
+          attempt-limit: 6

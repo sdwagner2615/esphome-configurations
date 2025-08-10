@@ -1,0 +1,20 @@
+# Forked from EP1's ESPHome build workflow as of 2025-08-10:
+# https://github.com/EverythingSmartHome/everything-presence-lite/blob/a760bb316415b1451f6f758ba52b0f2e3b96eb28/.github/workflows/publish.yml
+name: Publish ESPHome firmware
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.yaml'
+
+jobs:
+  publish-esphome-firmware:
+    name: Build/Refresh and Publish ESPHome firmware
+    uses: sdwagner2615/esphome-configurations/.github/workflows/esphome-build.yml@main
+    with:
+      files: ikea-vindriktning.yaml
+      clean: true
