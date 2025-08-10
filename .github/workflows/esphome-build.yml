@@ -75,7 +75,7 @@ jobs:
           echo "base_name=$base" >> $GITHUB_OUTPUT
       - run: |
           mkdir output
-          mv "${{ steps.esphome-build.outputs.base_name}}" temp
+          mv "${{ steps.set-names.outputs.base_name}}" temp
           mv temp "${{ steps.set-names.outputs.directory_name }}"
           mv "${{ steps.set-names.outputs.directory_name }}" output/
       - uses: actions/upload-artifact@v4
