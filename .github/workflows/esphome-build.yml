@@ -68,6 +68,7 @@ jobs:
         with:
           yaml-file: ${{ matrix.file }}
           version: ${{ needs.get-latest-versions.outputs.esphome-version }}
+          complete-manifest: true
       - id: set-names
         run: |
           base=$(basename "${{ matrix.file }}" .yaml)
@@ -110,34 +111,21 @@ jobs:
   publish:
     if: needs.check-and-tag.outputs.tag-exists == 'false' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main'
     name: Publish new firmware and website to GitHub Pages
+    needs: [prepare, build, check-and-tag]
     runs-on: ubuntu-latest
-    needs: [build, check-and-tag]
+    strategy:
+      matrix:
+        file: ${{ fromJson(needs.prepare.outputs.files) }}
     steps:
-      - uses: actions/checkout@v3.5.3
+      - id: set-names
+        run: |
+          base=$(basename "${{ matrix.file }}" .yaml)
+          echo "directory_name=$base" >> $GITHUB_OUTPUT
+          echo "base_name=$base" >> $GITHUB_OUTPUT
       - uses: actions/download-artifact@v4
         with:
           path: output
-          name: ${{ needs.build.outputs.base_name}}
-
-      - name: Create single manifest.json
-        run: |
-          # Create the merged manifest:
-          jq -s '{"name": "${{ needs.build.outputs.base_name }}", "version": "${{ needs.build.outputs.project-version }}", "home_assistant_domain": "esphome", "new_install_skip_erase": false, "builds":.}' output/*/manifest.json \
-            > output/${{ needs.build.outputs.base_name }}.json
-      
-          # Rewrite .path using jq to add unique directory to manifest
-          jq --arg dir "${{ needs.build.outputs.directory_name }}" '
-            .builds[].ota.path |= "\($dir)/\(.)" |
-            .builds[].parts[].path |= "\($dir)/\(.)"
-          ' \
-            output/${{ needs.build.outputs.base_name }}.json \
-            > output/manifest_temp.json
-      
-          mv output/manifest_temp.json output/${{ needs.build.outputs.base_name }}.json
-
-
-      - run: cp -R static/* output
-
+          name: ${{ steps.set-names.outputs.base_name }}
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
