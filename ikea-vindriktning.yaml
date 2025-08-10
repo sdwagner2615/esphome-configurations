@@ -1,0 +1,26 @@
+substitutions:
+  name: ikea-vindriktning
+  friendly_name: "IKEA Vindriktning"
+  log_level: DEBUG
+
+esp8266:
+  board: d1_mini
+
+#update:
+#  - platform: http_request
+#    id: update_http_request
+#    name: Ikea Vindriktning Esphome Firmware
+#    source: https://everythingsmarthome.github.io/everything-presence-one/everything-presence-one-ha-sen0395-nomodule-noble-rev1-5-stable-manifest.json
+#    disabled_by_default: false
+
+uart:
+  rx_pin: D1
+  baud_rate: 9600
+
+sensor:
+  - platform: pm1006
+    pm_2_5:
+      name: "Particulate Matter 2.5µm Concentration"
+
+packages:
+  base: !include common/device-base.yaml

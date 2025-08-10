@@ -1,0 +1,33 @@
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: true
+  project:
+    name: "sdwagner2615.esphome-configurations"
+    version: "0.1"
+
+# Enable logging
+logger:
+  level: ${log_level}
+
+# Enable Home Assistant API
+api:
+
+ota:
+  - platform: esphome
+    id: ota_esphome
+#  - platform: http_request
+#    id: ota_http_request
+
+#http_request:
+  # SSL verify not compatilbe with esp8266
+#  verify_ssl: false
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+
+captive_portal:
