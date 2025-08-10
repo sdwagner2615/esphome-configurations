@@ -103,7 +103,7 @@ jobs:
           fetch-depth: 0
       - id: check-and-tag
         run: |
-          tag="${{ needs.build.outputs.project-version }}-${{ needs.get-latest-versions.outputs.esphome-version }}"
+          tag="${{ needs.build.outputs.project-version }}"
           if git ls-remote --tags origin | grep -q "refs/tags/$tag$"; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
