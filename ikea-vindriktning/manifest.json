@@ -8,7 +8,7 @@
       "chipFamily": "ESP8266",
       "ota": {
         "path": "ikea-vindriktning-esp8266.ota.bin",
-        "md5": "8ec84a27f41af4c2fee72062e4f0e82c"
+        "md5": "01e8366aa848ed71aed239b30d86f984"
       },
       "parts": [
         {
