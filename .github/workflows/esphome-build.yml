@@ -1,4 +1,4 @@
-# Originally forked from EP1's ESPHome build workflow as of 2025-08-10:
+# Used EP1's ESPHome build workflow as a reference:
 # https://github.com/EverythingSmartHome/everything-presence-lite/blob/a760bb316415b1451f6f758ba52b0f2e3b96eb28/.github/workflows/esphome-build.yml
 name: workflow-publish-esphome-firmware
 
@@ -30,7 +30,7 @@ jobs:
       - id: files-array
         run: |
           files=$(echo "${{ inputs.files }}" | jq -Rcn 'inputs | . / ","')
-          echo ::set-output name=files::$files
+          echo "files=$files" >> $GITHUB_OUTPUT
 
   get-latest-versions:
     runs-on: ubuntu-latest
