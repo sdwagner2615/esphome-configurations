@@ -67,9 +67,9 @@ jobs:
         run: |
           esphome_version="${{ needs.get-latest-versions.outputs.esphome-version }}"
           # Extract current project version from device_base.yaml
-          project_version=$(grep 'version:' common/device-base.yaml | head -1 | sed 's/.*version:[ ]*"\?//;s/"\?//')
+          project_version=$(grep 'version:' common/device-base.yaml | head -1 | sed 's/.*version:[ ]*//;s/\"//g')
           new_version="$project_version-$esphome_version"
-          sed -i "s/^\( *version: *\).*/\1\"$new_version\"/" common/device-base.yaml
+          sed -i "s/^\( *version: *\).*/\1$new_version/" common/device-base.yaml
       - uses: esphome/build-action@v6
         id: esphome-build
         with:
