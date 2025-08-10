@@ -3,6 +3,10 @@
 name: publish-esphome-firmware
 
 on:
+  # Schedule the workflow to run on the first day of every month, regardless of changes.
+  # This ensures that the firmware is built and refreshed monthly.
+  schedule:
+    - cron: '0 0 1 * *'  # Runs at midnight on the first day of every month
   pull_request:
   workflow_dispatch:
   push:
