@@ -117,7 +117,6 @@ jobs:
 
   publish:
     if: needs.check-and-tag.outputs.tag-exists == 'false' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main'
-    name: Publish new firmware and website to GitHub Pages
     needs: [prepare, build, check-and-tag]
     runs-on: ubuntu-latest
     strategy:

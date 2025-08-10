@@ -6,13 +6,6 @@ substitutions:
 esp8266:
   board: d1_mini
 
-#update:
-#  - platform: http_request
-#    id: update_http_request
-#    name: Ikea Vindriktning Esphome Firmware
-#    source: https://everythingsmarthome.github.io/everything-presence-one/everything-presence-one-ha-sen0395-nomodule-noble-rev1-5-stable-manifest.json
-#    disabled_by_default: false
-
 uart:
   rx_pin: D1
   baud_rate: 9600
