@@ -6,7 +6,7 @@ esphome:
     name: "sdwagner2615.esphome-configurations"
     # The following version number will have the version of ESPHome appended to it
     # when the build is run. ie: "1.0-2025.07.05"
-    version: "0.2"
+    version: "0.3"
 
 # Enable logging
 logger:
@@ -30,6 +30,9 @@ wifi:
   ap:
 
 captive_portal:
+
+web_server:
+  port: 80
 
 # Adds an update component to the device that checks for firmware updates
 # and allows the user to update the firmware via the web interface.
