@@ -19,5 +19,4 @@ jobs:
   publish-esphome-firmware:
     uses: sdwagner2615/esphome-configurations/.github/workflows/esphome-build.yml@main
     with:
-      files: shelly-1.yaml,ikea-vindriktning.yaml
       clean: true
