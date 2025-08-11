@@ -6,7 +6,7 @@ esphome:
     name: "sdwagner2615.esphome-configurations"
     # The following version number will have the version of ESPHome appended to it
     # when the build is run. ie: "1.0-2025.07.05"
-    version: "0.4"
+    version: "0.5"
 
 # Enable logging
 logger:
@@ -19,12 +19,6 @@ api:
 ota:
   - platform: esphome
     id: ota_esphome
-  - platform: http_request
-    id: ota_http_request
-
-http_request:
-  # SSL verify not compatilbe with esp8266
-  verify_ssl: false
 
 wifi:
   ap:
@@ -33,12 +27,3 @@ captive_portal:
 
 web_server:
   port: 80
-
-# Adds an update component to the device that checks for firmware updates
-# and allows the user to update the firmware via the web interface.
-update:
-  - platform: http_request
-    id: update_http_request
-    name: Firmware
-    source: https://sdwagner2615.github.io/esphome-configurations/${name}/manifest.json
-    disabled_by_default: false

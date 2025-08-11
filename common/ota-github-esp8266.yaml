@@ -1,0 +1,20 @@
+# Adds an update component to the device that checks for firmware updates
+# and allows the user to update the firmware via the web interface.
+# This version disables SSL verification for compatibility with ESP8266 boards
+# with limited resources.
+ota:
+  - platform: http_request
+    id: ota_http_request
+
+http_request:
+  # SSL verify not compatilbe with esp8266, and ssl support takes more space.
+  verify_ssl: false
+  esp8266_disable_ssl_support: true
+
+update:
+  - platform: http_request
+    id: update_http_request
+    name: Firmware
+    source: https://sdwagner2615.github.io/esphome-configurations/${name}/manifest.json
+    disabled_by_default: false
+
