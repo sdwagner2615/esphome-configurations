@@ -1,0 +1,49 @@
+substitutions:
+  name: shelly-1
+  friendly_name: "Shelly 1"
+  log_level: DEBUG
+
+esp8266:
+  board: esp01_1m
+
+# Device Specific Config
+output:
+  - platform: gpio
+    pin: GPIO4
+    id: shelly_1_relay
+
+light:
+  - platform: binary
+    name: "Shelly 1 Light"
+    output: shelly_1_relay
+    id: lightid
+    
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO5
+    name: "Switch Shelly 1"
+    on_state:
+      then:
+        # If the wall switch is turned on, and the relay is off, turn the relay on
+        - if:
+            condition:
+              and:
+                - binary_sensor.is_on: switchid
+                - light.is_off: lightid
+            then:
+              - light.turn_on: lightid
+        # If the wall switch is turned off, and the relay is on, turn the relay off
+        - if:
+            condition:
+              and:
+                - binary_sensor.is_off: switchid
+                - light.is_on: lightid
+            then:
+              - light.turn_off: lightid
+        # Otherwise, do nothing.
+    internal: false
+    id: switchid
+  
+packages:
+  base: !include common/device-base.yaml
