@@ -23,6 +23,7 @@ jobs:
     outputs:
       files: ${{ steps.files-array.outputs.files }}
     steps:
+      - uses: actions/checkout@v3.5.3
       - id: files-array
         run: |
           files=$(find . -maxdepth 1 -name '*.yaml' -printf '%f\n' | jq -R -s -c 'split("\n")[:-1]')
