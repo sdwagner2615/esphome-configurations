@@ -121,9 +121,8 @@ jobs:
       - name: download-artifacts
         run: |
           files=${{ needs.prepare.outputs.files }}
-          for file in $(echo $files | jq -r '.[]'); do
+          for file in $(echo '${{ needs.prepare.outputs.files }}' | jq -r '.[]'); do
             echo "Downloading artifact for $file"
-            # Download artifact for each file
             gh run download --name $(basename "$file" .yaml) --dir output || true
           done
       - name: Deploy 🚀
