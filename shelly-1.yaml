@@ -1,3 +1,4 @@
+# https://devices.esphome.io/devices/Shelly-1#basic-configuration
 substitutions:
   name: shelly-1
   friendly_name: "Shelly 1"
@@ -14,7 +15,7 @@ output:
 
 light:
   - platform: binary
-    name: "Shelly 1 Light"
+    name: "Shelly 1 Relay"
     output: shelly_1_relay
     id: lightid
     
