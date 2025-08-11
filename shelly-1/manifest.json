@@ -7,12 +7,12 @@
     {
       "chipFamily": "ESP8266",
       "ota": {
-        "path": "ikea-vindriktning-esp8266.ota.bin",
-        "md5": "c44dae07431a0aab4a593558c643ffc7"
+        "path": "shelly-1-esp8266.ota.bin",
+        "md5": "6a7fd5e5a067134c155e80fbef4f2908"
       },
       "parts": [
         {
-          "path": "ikea-vindriktning-esp8266.factory.bin",
+          "path": "shelly-1-esp8266.factory.bin",
           "offset": 0
         }
       ]
