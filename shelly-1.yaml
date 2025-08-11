@@ -22,7 +22,7 @@ binary_sensor:
   - platform: gpio
     pin:
       number: GPIO5
-    name: "Switch Shelly 1"
+    name: "Shelly 1 Switch"
     on_state:
       then:
         # If the wall switch is turned on, and the relay is off, turn the relay on
