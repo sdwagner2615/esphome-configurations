@@ -1,13 +1,13 @@
 {
   "name": "sdwagner2615.esphome-configurations",
-  "version": "0.7-2025.7.5",
+  "version": "0.8-2025.7.5",
   "home_assistant_domain": "esphome",
   "new_install_prompt_erase": false,
   "builds": [
     {
       "chipFamily": "ESP8266",
       "ota": {
-        "path": "shelly-1-esp8266.ota.bin.gz",
+        "path": "shelly-1-esp8266.ota.bin",
         "md5": ""
       },
       "parts": [
