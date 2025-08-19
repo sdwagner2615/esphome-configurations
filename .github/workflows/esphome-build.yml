@@ -100,7 +100,7 @@ jobs:
         run: |
           for manifest in output/*/manifest.json; do
             [ -f "$manifest" ] || continue
-            gzfile="output/$(jq -r '.builds[].ota.path' "$manifest")"
+            gzfile="$(dirname "$manifest")/$(jq -r '.builds[].ota.path' "$manifest")"
             md5=$(md5sum "$gzfile" | awk '{print $1}')
             jq --arg md5 "$md5" '.builds[].ota.md5 |= ($md5)' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
           done
