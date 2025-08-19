@@ -1,5 +1,3 @@
-# todo: OTA updates fail when using ESPHome, device is too small?
-# https://devices.esphome.io/devices/Shelly-1#basic-configuration
 substitutions:
   name: shelly-1
   friendly_name: "Shelly 1"
@@ -48,5 +46,5 @@ binary_sensor:
     id: switchid
   
 packages:
-  base: !include common/device-base.yaml         # Uses 44.9% of flash
-  ota:  !include common/ota-github-esp8266.yaml  # Uses 48.4% of flash
+  base: !include common/device-base.yaml
+  ota:  !include common/ota-http-request.yaml

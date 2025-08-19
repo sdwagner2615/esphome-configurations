@@ -16,5 +16,5 @@ sensor:
       name: "Particulate Matter 2.5µm Concentration"
 
 packages:
-  base: !include common/device-base.yaml         # Uses 41.8% of flash
-  ota:  !include common/ota-github-esp8266.yaml  # Uses 45.3% of flash
+  base: !include common/device-base.yaml
+  ota:  !include common/ota-http-request.yaml

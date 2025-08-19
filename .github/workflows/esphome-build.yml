@@ -82,6 +82,13 @@ jobs:
           mkdir output
           mv "${{ steps.esphome-build.outputs.name}}" "${{ steps.set-names.outputs.directory_name }}"
           mv "${{ steps.set-names.outputs.directory_name }}" output/
+      - name: Compress OTA binary
+        run: |
+          bin_dir="output/${{ steps.set-names.outputs.directory_name }}"
+          bin_file="$bin_dir/${{ steps.esphome-build.outputs.name }}"
+          if [ -f "$bin_file" ]; then
+            gzip -c "$bin_file" > "$bin_file.gz"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.set-names.outputs.base_name }}
@@ -126,6 +133,12 @@ jobs:
           for file in $(echo '${{ needs.prepare.outputs.files }}' | jq -r '.[]'); do
             echo "Downloading artifact for $file"
             gh run download --name $(basename "$file" .yaml) --dir output || true
+          done
+      - name: Update manifest for gzipped OTA
+        run: |
+          for manifest in output/*/manifest.json; do
+            [ -f "$manifest" ] || continue
+            jq '.builds[].ota.path |= (. + ".gz")' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
           done
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
