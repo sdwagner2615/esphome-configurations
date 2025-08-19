@@ -100,9 +100,13 @@ jobs:
         run: |
           for manifest in output/*/manifest.json; do
             [ -f "$manifest" ] || continue
-            gzfile="$(dirname "$manifest")/$(jq -r '.builds[].ota.path' "$manifest")"
+            orig_path=$(jq -r '.builds[].ota.path' "$manifest")
+            gz_path="$orig_path.gz"
+            gzfile="$(dirname "$manifest")/$gz_path"
             md5=$(md5sum "$gzfile" | awk '{print $1}')
-            jq --arg md5 "$md5" '.builds[].ota.md5 |= ($md5)' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+            jq --arg gz "$gz_path" --arg md5 "$md5" \
+              '.builds[].ota.path |= $gz | .builds[].ota.md5 |= $md5' \
+              "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
           done
       - uses: actions/upload-artifact@v4
         with:
