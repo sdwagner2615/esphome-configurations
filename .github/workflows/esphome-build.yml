@@ -88,7 +88,7 @@ jobs:
         run: |
           bin_dir="output/${{ steps.set-names.outputs.directory_name }}"
           bin_file="$bin_dir/${{ steps.esphome-build.outputs.name }}.ota.bin"
-          gz_file="output/$(basename "${bin_file}")".gz
+          gz_file="output/${{ steps.set-names.outputs.directory_name }}/$(basename "${bin_file}")".gz
           if [ -f "$bin_file" ]; then
             gzip -c "$bin_file" > "$gz_file"
           else
