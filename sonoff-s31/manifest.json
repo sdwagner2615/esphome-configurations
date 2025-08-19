@@ -7,12 +7,12 @@
     {
       "chipFamily": "ESP8266",
       "ota": {
-        "path": "ikea-vindriktning-esp8266.ota.bin.gz",
-        "md5": "0323e01ae7df64626fbcfbfed5688372"
+        "path": "sonoff-s31-esp8266.ota.bin.gz",
+        "md5": "d2eae8a6a32e432040bf34a5f004d30e"
       },
       "parts": [
         {
-          "path": "ikea-vindriktning-esp8266.factory.bin",
+          "path": "sonoff-s31-esp8266.factory.bin",
           "offset": 0
         }
       ]
