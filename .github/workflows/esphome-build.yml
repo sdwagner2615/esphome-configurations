@@ -96,6 +96,12 @@ jobs:
             ls -l "$bin_dir"
             exit 1
           fi
+      - name: Update manifest for gzipped OTA
+        run: |
+          for manifest in output/*/manifest.json; do
+            [ -f "$manifest" ] || continue
+            jq '.builds[].ota.path |= (. + ".gz")' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.set-names.outputs.base_name }}
@@ -140,12 +146,6 @@ jobs:
           for file in $(echo '${{ needs.prepare.outputs.files }}' | jq -r '.[]'); do
             echo "Downloading artifact for $file"
             gh run download --name $(basename "$file" .yaml) --dir output || true
-          done
-      - name: Update manifest for gzipped OTA
-        run: |
-          for manifest in output/*/manifest.json; do
-            [ -f "$manifest" ] || continue
-            jq '.builds[].ota.path |= (. + ".gz")' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
           done
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
