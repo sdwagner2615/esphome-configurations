@@ -82,12 +82,19 @@ jobs:
           mkdir output
           mv "${{ steps.esphome-build.outputs.name}}" "${{ steps.set-names.outputs.directory_name }}"
           mv "${{ steps.set-names.outputs.directory_name }}" output/
+      - name: List output files
+        run: ls -lR output
       - name: Compress OTA binary
         run: |
-          bin_file="output/${{ steps.set-names.outputs.directory_name }}/${{ steps.esphome-build.outputs.name }}"
-          gz_file="output/$(basename "${bin_file}").gz"
+          bin_dir="output/${{ steps.set-names.outputs.directory_name }}"
+          bin_file="$bin_dir/${{ steps.esphome-build.outputs.name }}.bin"
+          gz_file="output/$(basename "${bin_file}")".gz
           if [ -f "$bin_file" ]; then
             gzip -c "$bin_file" > "$gz_file"
+          else
+            echo "File not found: $bin_file"
+            ls -l "$bin_dir"
+            exit 1
           fi
       - uses: actions/upload-artifact@v4
         with:
