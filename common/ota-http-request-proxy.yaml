@@ -1,0 +1,19 @@
+# Adds an update component to the device that checks for firmware updates
+# and allows the user to update the firmware via the web interface.
+ota:
+  - platform: http_request
+    id: ota_http_request
+
+http_request:
+  # SSL verify not compatilbe with esp8266
+  verify_ssl: false
+  esp8266_disable_ssl_support: true
+
+update:
+  - platform: http_request
+    id: update_http_request
+    name: Firmware
+    # Proxies the request to sdwagner2615.github.io.
+    source: http://docker.tns.rdu/esphome-configurations/${name}/manifest.json
+    disabled_by_default: false
+

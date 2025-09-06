@@ -90,4 +90,4 @@ status_led:
 
 packages:
   base: !include common/device-base.yaml
-  ota:  !include common/ota-http-request.yaml
+  ota:  !include common/ota-http-request-proxy.yaml
