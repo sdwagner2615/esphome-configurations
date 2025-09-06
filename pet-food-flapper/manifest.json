@@ -7,12 +7,12 @@
     {
       "chipFamily": "ESP8266",
       "ota": {
-        "path": "sonoff-s31-esp8266.ota.bin",
-        "md5": "78a44e63784408b2a1aa3c31ea425175"
+        "path": "pet-food-flapper-esp8266.ota.bin",
+        "md5": "ed0ec53f2378365ee65d2fdf3cb4d0b2"
       },
       "parts": [
         {
-          "path": "sonoff-s31-esp8266.factory.bin",
+          "path": "pet-food-flapper-esp8266.factory.bin",
           "offset": 0
         }
       ]
