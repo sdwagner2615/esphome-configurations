@@ -82,32 +82,6 @@ jobs:
           mkdir output
           mv "${{ steps.esphome-build.outputs.name}}" "${{ steps.set-names.outputs.directory_name }}"
           mv "${{ steps.set-names.outputs.directory_name }}" output/
-      # - name: List output files
-      #   run: ls -lR output
-      # - name: Compress OTA binary
-      #   run: |
-      #     bin_dir="output/${{ steps.set-names.outputs.directory_name }}"
-      #     bin_file="$bin_dir/${{ steps.esphome-build.outputs.name }}.ota.bin"
-      #     gz_file="output/${{ steps.set-names.outputs.directory_name }}/$(basename "${bin_file}")".gz
-      #     if [ -f "$bin_file" ]; then
-      #       gzip -c "$bin_file" > "$gz_file"
-      #     else
-      #       echo "File not found: $bin_file"
-      #       ls -l "$bin_dir"
-      #       exit 1
-      #     fi
-      # - name: Update manifest for gzipped OTA and MD5
-      #   run: |
-      #     for manifest in output/*/manifest.json; do
-      #       [ -f "$manifest" ] || continue
-      #       orig_path=$(jq -r '.builds[].ota.path' "$manifest")
-      #       gz_path="$orig_path.gz"
-      #       gzfile="$(dirname "$manifest")/$gz_path"
-      #       md5=$(md5sum "$gzfile" | awk '{print $1}')
-      #       jq --arg gz "$gz_path" --arg md5 "$md5" \
-      #         '.builds[].ota.path |= $gz | .builds[].ota.md5 |= $md5' \
-      #         "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
-      #     done
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.set-names.outputs.base_name }}

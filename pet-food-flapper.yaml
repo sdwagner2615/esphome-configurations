@@ -1,0 +1,64 @@
+substitutions:
+  name: pet-food-flapper
+  friendly_name: "Pet Food Flapper"
+  log_level: DEBUG
+
+esp8266:
+  board: esp01_1m
+
+# Outputs to the DRV8833 inputs (use GPIO1 and GPIO3)
+output:
+  - platform: esp8266_pwm
+    pin: GPIO1
+    id: motor_a
+  - platform: esp8266_pwm
+    pin: GPIO3
+    id: motor_b
+
+fan:
+  - platform: hbridge
+    id: drv8833_internal
+    pin_a: motor_a
+    pin_b: motor_b
+    internal: true   # don’t expose this to HA
+
+cover:
+  - platform: template
+    name: "Food Cover"
+    device_class: door
+    id: my_cover
+    optimistic: true
+    open_action:
+      - if:
+          condition:
+            lambda: 'return id(my_cover).position != COVER_OPEN;'
+          then:
+            - fan.turn_on:
+                id: drv8833_internal
+                direction: forward
+                speed: 100
+            - delay: 400ms
+            - fan.turn_off: drv8833_internal
+            - cover.template.publish:
+                id: my_cover
+                state: OPEN
+    close_action:
+      - if:
+          condition:
+            lambda: 'return id(my_cover).position != COVER_CLOSED;'
+          then:
+            - fan.turn_on:
+                id: drv8833_internal
+                direction: reverse
+                speed: 100
+            - delay: 400ms
+            - fan.turn_off: drv8833_internal
+            - cover.template.publish:
+                id: my_cover
+                state: CLOSED
+    stop_action:
+      - fan.turn_off: drv8833_internal
+
+packages:
+  base: !include common/device-base.yaml
+  ota:  !include common/ota-http-request-proxy.yaml
