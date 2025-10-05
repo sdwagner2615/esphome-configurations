@@ -49,6 +49,7 @@ jobs:
     name: build binary for ${{ matrix.file }}
     needs: [prepare, get-latest-versions]
     runs-on: ubuntu-latest
+    environment: esphome-build
     strategy:
       matrix:
         file: ${{ fromJson(needs.prepare.outputs.files) }}
@@ -60,6 +61,12 @@ jobs:
       directory_name: ${{ steps.set-names.outputs.directory_name }}
     steps:
       - uses: actions/checkout@v3.5.3
+      - name: Create secrets.yaml
+        run: |
+          echo "mqtt_hostname: ${{ secrets.mqtt_hostname }}" > secrets.yaml
+          echo "mqtt_username: ${{ secrets.mqtt_username }}" >> secrets.yaml
+          echo "mqtt_password: ${{ secrets.mqtt_password }}" >> secrets.yaml
+        shell: bash
       - name: update-project-version
         run: |
           esphome_version="${{ needs.get-latest-versions.outputs.esphome-version }}"

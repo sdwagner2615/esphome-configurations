@@ -64,7 +64,8 @@ mqtt:
   broker: !secret mqtt_hostname
   username: !secret mqtt_username
   password: !secret mqtt_password
-  discovery: false
+  discovery: False # disable entity discovery
+  discover_ip: True # enable device discovery
   on_message:
     - topic: flapper/command
       payload: "open"
