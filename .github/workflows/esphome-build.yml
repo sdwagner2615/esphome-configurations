@@ -63,9 +63,9 @@ jobs:
       - uses: actions/checkout@v3.5.3
       - name: Create secrets.yaml
         run: |
-          echo "mqtt_hostname: ${{ secrets.mqtt_hostname }}" > secrets.yaml
-          echo "mqtt_username: ${{ secrets.mqtt_username }}" >> secrets.yaml
-          echo "mqtt_password: ${{ secrets.mqtt_password }}" >> secrets.yaml
+          printf "mqtt_hostname: '%s'\n" "${{ secrets.mqtt_hostname }}" > secrets.yaml
+          printf "mqtt_username: '%s'\n" "${{ secrets.mqtt_username }}" >> secrets.yaml
+          printf "mqtt_password: '%s'\n" "${{ secrets.mqtt_password }}" >> secrets.yaml
         shell: bash
       - name: update-project-version
         run: |
