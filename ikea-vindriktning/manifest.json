@@ -1,6 +1,6 @@
 {
   "name": "sdwagner2615.esphome-configurations",
-  "version": "0.13-2025.8.3",
+  "version": "0.13-2025.9.3",
   "home_assistant_domain": "esphome",
   "new_install_prompt_erase": false,
   "builds": [
@@ -8,7 +8,7 @@
       "chipFamily": "ESP8266",
       "ota": {
         "path": "ikea-vindriktning-esp8266.ota.bin",
-        "md5": "77f0ef35f48933efdf968c9d3c8a29e7"
+        "md5": "b5252be74f9b1850b86f14fef52c463d"
       },
       "parts": [
         {

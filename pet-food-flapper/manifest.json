@@ -1,18 +1,18 @@
 {
   "name": "sdwagner2615.esphome-configurations",
-  "version": "0.13-2025.8.3",
+  "version": "0.13-2025.9.3",
   "home_assistant_domain": "esphome",
   "new_install_prompt_erase": false,
   "builds": [
     {
-      "chipFamily": "ESP8266",
+      "chipFamily": "ESP32-C3",
       "ota": {
-        "path": "pet-food-flapper-esp8266.ota.bin",
-        "md5": "ed0ec53f2378365ee65d2fdf3cb4d0b2"
+        "path": "pet-food-flapper-esp32c3.ota.bin",
+        "md5": "1387b2d058f66aa09911e5b2554c57ba"
       },
       "parts": [
         {
-          "path": "pet-food-flapper-esp8266.factory.bin",
+          "path": "pet-food-flapper-esp32c3.factory.bin",
           "offset": 0
         }
       ]
