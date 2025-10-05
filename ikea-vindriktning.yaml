@@ -17,4 +17,4 @@ sensor:
 
 packages:
   base: !include common/device-base.yaml
-  ota:  !include common/ota-http-request-proxy.yaml
+  ota:  !include esp8266/ota-http-request.yaml

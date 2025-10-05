@@ -35,3 +35,8 @@ button:
     name: Restart
   - platform: factory_reset
     name: Factory Reset
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal Strength"
+    update_interval: 60s

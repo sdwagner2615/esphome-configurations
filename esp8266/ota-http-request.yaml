@@ -1,5 +1,7 @@
 # Adds an update component to the device that checks for firmware updates
-# and allows the user to update the firmware via the web interface.
+# and allows the user to update the firmware via the web interface. It uses
+# a self-hosted HTTP proxy server to fetch the update manifests and binaries
+# allowing for OTA updates without requiring SSL support on the device.
 ota:
   - platform: http_request
     id: ota_http_request

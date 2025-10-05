@@ -3,16 +3,16 @@ substitutions:
   friendly_name: "Pet Food Flapper"
   log_level: DEBUG
 
-esp8266:
-  board: esp01_1m
+esp32:
+  board: seeed_xiao_esp32c3
 
 # Outputs to the DRV8833 inputs (use GPIO1 and GPIO3)
 output:
-  - platform: esp8266_pwm
-    pin: GPIO1
-    id: motor_a
-  - platform: esp8266_pwm
+  - platform: ledc
     pin: GPIO3
+    id: motor_a
+  - platform: ledc
+    pin: GPIO5
     id: motor_b
 
 fan:
@@ -59,6 +59,22 @@ cover:
     stop_action:
       - fan.turn_off: drv8833_internal
 
+# MQTT Configuration for easy/legacy integration with Blue Iris alert triggers.
+mqtt:
+  broker: !secret mqtt_hostname
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  discovery: false
+  on_message:
+    - topic: flapper/command
+      payload: "open"
+      then:
+        - cover.open: my_cover
+    - topic: flapper/command
+      payload: "close"
+      then:
+        - cover.close: my_cover
+
 packages:
   base: !include common/device-base.yaml
-  ota:  !include common/ota-http-request-proxy.yaml
+  ota:  !include common/ota-http-request.yaml
