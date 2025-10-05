@@ -120,7 +120,7 @@ jobs:
           fi
 
   publish:
-    if: needs.check-and-tag.outputs.tag-exists == 'false' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main'
+    if: needs.check-and-tag.outputs.tag-exists == 'false' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event_name == 'scheduled') && github.ref == 'refs/heads/main'
     needs: [prepare, build, check-and-tag]
     runs-on: ubuntu-latest
     steps:
