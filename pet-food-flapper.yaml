@@ -6,6 +6,11 @@ substitutions:
 esp32:
   board: seeed_xiao_esp32c3
 
+globals:
+  - id: disable_auto_close
+    type: bool
+    initial_value: 'false'
+
 # Outputs to the DRV8833 inputs (use GPIO1 and GPIO3)
 output:
   - platform: ledc
@@ -15,6 +20,40 @@ output:
     pin: GPIO5
     id: motor_b
 
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO7
+      mode: INPUT_PULLUP
+    name: "Cover Sensor"
+    id: flapper_state
+    device_class: door
+    # To stop a cat who will try and claw open the cover, if the sensor changes
+    # state manually, we need to ensure the cover logic runs to correct it.
+    # Allow temporarily disabling that behavior by setting
+    # `id(disable_auto_close)` to true, this will be necessary so we can open
+    # the cover and refill the bowl.
+    on_state:
+      - if:
+          condition:
+            lambda: 'return !id(disable_auto_close);'
+          then:
+            # If the sensor is ON (open) but the cover still thinks it's CLOSED,
+            # request a close so the cover logic runs.
+            - if:
+                condition:
+                  binary_sensor.is_on: flapper_state
+                then:
+                  - logger.log: "Manual open detected, checking cover state"
+                  - if:
+                      condition:
+                        lambda: 'return id(my_cover).position == COVER_CLOSED;'
+                      then:
+                        - logger.log: "Manual open detected — closing cover to match desired state"
+                        - cover.close: my_cover
+          else:
+            - logger.log: "Auto-close disabled; ignoring sensor state change"
+
 fan:
   - platform: hbridge
     id: drv8833_internal
@@ -22,40 +61,88 @@ fan:
     pin_b: motor_b
     internal: true   # don’t expose this to HA
 
+button:
+  - platform: template
+    name: "Disable Auto-Close (60s)"
+    id: disable_auto_close_button
+    on_press:
+      - globals.set:
+          id: disable_auto_close
+          value: 'true'
+      - logger.log: "Auto-close disabled for 60s"
+      - delay: 60s
+      - globals.set:
+          id: disable_auto_close
+          value: 'false'
+      - logger.log: "Auto-close re-enabled"
+
 cover:
   - platform: template
     name: "Food Cover"
     device_class: door
     id: my_cover
-    optimistic: true
+    optimistic: false
     open_action:
       - if:
           condition:
-            lambda: 'return id(my_cover).position != COVER_OPEN;'
+            binary_sensor.is_off: flapper_state  # Is Closed
           then:
+            # When opening, publish the state first otherwise the binary sensor on_state
+            # will trigger a close action immediately.
+            - cover.template.publish:
+                id: my_cover
+                state: OPEN
             - fan.turn_on:
                 id: drv8833_internal
                 direction: forward
                 speed: 100
             - delay: 400ms
             - fan.turn_off: drv8833_internal
-            - cover.template.publish:
-                id: my_cover
-                state: OPEN
     close_action:
       - if:
           condition:
-            lambda: 'return id(my_cover).position != COVER_CLOSED;'
+            binary_sensor.is_on: flapper_state  # Is Open
           then:
             - fan.turn_on:
                 id: drv8833_internal
                 direction: reverse
-                speed: 100
-            - delay: 400ms
+                speed: 50
+            - delay: 500ms  # 400ms isn't long enough at half speed
             - fan.turn_off: drv8833_internal
+      # If it's still open, try up to 4 more times. A slight delay between each attempt
+      # should help "scare off" any cat that might be blocking it.
+      - if:
+          condition:
+            binary_sensor.is_on: flapper_state  # Is Open
+          then: 
+            - repeat:
+                count: 4
+                then:
+                  - if:
+                      condition:
+                        binary_sensor.is_on: flapper_state  # Is Open
+                      then:
+                        - fan.turn_on:
+                            id: drv8833_internal
+                            direction: reverse
+                            speed: 50
+                        - delay: 500ms
+                        - fan.turn_off: drv8833_internal
+                        - wait_until:
+                            timeout: 1s
+                            condition:
+                              binary_sensor.is_off: flapper_state  # Is Closed
+                      else:
+                        - logger.log: "Flapper already closed; skipping"
+      - if:
+          condition:
+            binary_sensor.is_off: flapper_state  # Is Closed
+          then:
             - cover.template.publish:
                 id: my_cover
                 state: CLOSED
+          else:
+            - logger.log: "Close timeout: flapper_state did not reach expected state after 5 attempts"
     stop_action:
       - fan.turn_off: drv8833_internal
 
