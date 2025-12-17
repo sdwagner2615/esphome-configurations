@@ -151,9 +151,9 @@ cover:
 
 # MQTT Configuration for easy/legacy integration with Blue Iris alert triggers.
 mqtt:
-  broker: !secret mqtt_hostname
-  username: !secret mqtt_username
-  password: !secret mqtt_password
+  broker: !secret MQTT_HOSTNAME
+  username: !secret MQTT_USERNAME
+  password: !secret MQTT_PASSWORD
   discovery: False # disable entity discovery
   discover_ip: True # enable device discovery
   on_message:
