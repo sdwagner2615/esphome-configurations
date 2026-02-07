@@ -1,6 +1,6 @@
 {
   "name": "sdwagner2615.esphome-configurations",
-  "version": "0.15-2026.1.3",
+  "version": "0.15-2026.1.4",
   "home_assistant_domain": "esphome",
   "new_install_prompt_erase": false,
   "builds": [
@@ -8,7 +8,7 @@
       "chipFamily": "ESP8266",
       "ota": {
         "path": "pet-sprayer-esp8266.ota.bin",
-        "md5": "4704a5b4796d5cd509430a385e2efc9e"
+        "md5": "b83bf901ea80b55cafef42527bddcb88"
       },
       "parts": [
         {
