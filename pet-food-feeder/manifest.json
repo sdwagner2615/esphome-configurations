@@ -1,0 +1,21 @@
+{
+  "name": "sdwagner2615.esphome-configurations",
+  "version": "0.15-2026.7.4",
+  "home_assistant_domain": "esphome",
+  "new_install_prompt_erase": false,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C3",
+      "ota": {
+        "path": "pet-food-feeder-esp32c3.ota.bin",
+        "md5": "5e04bb2afeacffd3a4a577402360ba1d"
+      },
+      "parts": [
+        {
+          "path": "pet-food-feeder-esp32c3.factory.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}

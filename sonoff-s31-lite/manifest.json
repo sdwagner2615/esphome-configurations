@@ -1,0 +1,21 @@
+{
+  "name": "sdwagner2615.esphome-configurations",
+  "version": "0.15-2026.7.4",
+  "home_assistant_domain": "esphome",
+  "new_install_prompt_erase": false,
+  "builds": [
+    {
+      "chipFamily": "ESP8266",
+      "ota": {
+        "path": "sonoff-s31-lite-esp8266.ota.bin",
+        "md5": "aba8cdfce0b1c9cd381f46cdc8be8f98"
+      },
+      "parts": [
+        {
+          "path": "sonoff-s31-lite-esp8266.factory.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}
