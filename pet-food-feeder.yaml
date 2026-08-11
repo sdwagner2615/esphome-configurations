@@ -1,0 +1,109 @@
+substitutions:
+  name: pet-food-feeder
+  friendly_name: "Pet Food Feeder"
+  log_level: DEBUG
+
+esp32:
+  board: seeed_xiao_esp32c3
+  framework:
+    type: esp-idf
+
+globals:
+  # Timestamp of the last unlock action. Once unlocked the feeder remains unlocked for 60s.
+  - id: last_unlock_time
+    type: uint32_t
+    initial_value: "0"
+
+switch:
+  - platform: gpio
+    pin:
+      number: GPIO3
+      mode: OUTPUT
+      inverted: false
+    id: disable_lock_pin
+    internal: true
+    on_turn_on:
+      - globals.set:
+          id: last_unlock_time
+          value: !lambda 'return millis();'
+  - platform: gpio
+    pin:
+      number: GPIO1
+      mode: OUTPUT
+      inverted: false
+    id: dispense_food_pin
+    internal: true
+
+button:
+  - platform: template
+    name: "Dispense Food"
+    id: dispense_food_button
+    on_press:
+      - logger.log: "Dispense Food button pressed"
+      - if:
+          condition:
+            lambda: 'return (millis() - id(last_unlock_time)) > 60000;'
+          then:
+            - logger.log: "Lock expired, unlocking dispenser"
+            - switch.turn_on: disable_lock_pin
+            - delay: 3000ms  # Needs to be held for 3 seconds according to the manual.
+            - switch.turn_off: disable_lock_pin
+          else:
+            - logger.log: "Lock still active, skipping unlock"
+      - switch.turn_on: dispense_food_pin
+      - delay: 500ms
+      - switch.turn_off: dispense_food_pin
+      - delay: 3000ms  # Delay 3s before allowing another dispense, any faster and the command is ignored.
+      - logger.log: "Dispense Food action complete"
+  - platform: template
+    name: "Multi Dispense Food"
+    id: multi_dispense_food_button
+    on_press:
+      - logger.log: "Multi Dispense Food button pressed"
+      - if:
+          condition:
+            lambda: 'return (millis() - id(last_unlock_time)) > 60000;'
+          then:
+            - logger.log: "Lock expired, unlocking dispenser"
+            - switch.turn_on: disable_lock_pin
+            - delay: 3000ms  # Needs to be held for 3 seconds according to the manual.
+            - switch.turn_off: disable_lock_pin
+          else:
+            - logger.log: "Lock still active, skipping unlock"
+      - repeat:
+          count: !lambda 'return id(dispense_count).state;'
+          then:
+            - switch.turn_on: dispense_food_pin
+            - delay: 500ms
+            - switch.turn_off: dispense_food_pin
+            - delay: 3000ms  # Delay 3s before allowing another dispense, any faster and the command is ignored.
+      - logger.log: "Multi Dispense Food action complete"
+
+number:
+  - platform: template
+    name: "Dispense Count"
+    id: dispense_count
+    min_value: 1
+    max_value: 10
+    initial_value: 5
+    step: 1
+    optimistic: true
+    
+    unit_of_measurement: "times"
+
+# MQTT Configuration for easy/legacy integrations.
+mqtt:
+  broker: !secret mqtt_hostname
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  discovery: False # disable entity discovery
+  discover_ip: True # enable device discovery
+  on_message:
+    - topic: feeder/command
+      payload: "feed"
+      then:
+        - button.press: dispense_food_button
+
+packages:
+  base: !include common/device-base.yaml
+  ota:  !include common/ota-http-request.yaml
