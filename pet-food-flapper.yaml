@@ -8,6 +8,15 @@ esp32:
   framework:
     type: esp-idf
 
+# Timestamp (ms) of the last command issued to the motor. The motor watchdog below
+# compares this against the current time to detect an H-bridge that was left energized
+# when a new cover command interrupted an in-progress open/close between its motor on
+# and off steps.
+globals:
+  - id: motor_last_cmd_ms
+    type: uint32_t
+    initial_value: "0"
+
 # User speed configurable values for open/close speeds
 number:
   - platform: template
@@ -91,31 +100,52 @@ binary_sensor:
     id: flapper_state
     device_class: door
     on_state:
+      # Safety: the flapper is physically closed, so the motor must never be energized.
+      # This immediately clears any stranded H-bridge state left behind when a new cover
+      # command interrupted an in-progress open/close between the motor on and off steps,
+      # and it also stops the motor the moment the flapper seats instead of at the end of
+      # the timed stroke, reducing stall time during normal operation.
+      - if:
+          condition:
+            - binary_sensor.is_off: flapper_state  # If the sensor is CLOSED...
+          then:
+            - logger.log: "Flapper closed; de-energizing motor (a closed flapper never needs torque)"
+            - fan.turn_off: drv8833_internal
       # To stop a cat who will try and claw open the cover, if the sensor changes state
       # manually, we need to ensure the cover logic runs to correct it. If the cover is
       # locked, unlock it first. We do this incase the cover is locked and closed, without
       # this logic - a person trying to refill the bowl would be unable to open the cover.
+      # The fan.is_off guard prevents re-triggering a close while a close is already
+      # actively driving the motor; each re-trigger would interrupt and restart the
+      # in-progress close from the beginning.
       - if:
           condition:
             - binary_sensor.is_on: flapper_state  # If the sensor is OPEN...
             - lambda: 'return id(my_cover).position == COVER_CLOSED;' # And the cover should be CLOSED...
+            - fan.is_off: drv8833_internal  # And no close is actively driving the motor...
           then:
             - logger.log: "Manual open detected — closing cover to match desired state"
             - switch.turn_off: lock_cover_state
             - cover.close: my_cover
       # If the cover is locked, and the sensor changes state to closed (manually) we should update
-      # the cover state to match and reset the lock state to unlocked.
+      # the cover state to match and reset the lock state to unlocked. This now also handles
+      # the unlocked case, where an interrupted close can leave the cover state OPEN while
+      # the flapper is physically closed.
       - if:
           condition:
             - binary_sensor.is_off: flapper_state  # If the sensor is CLOSED...
-            - switch.is_on: lock_cover_state  # And the cover is locked...
             - lambda: 'return id(my_cover).position == COVER_OPEN;' # And the cover should be OPEN...
           then:
-            - logger.log: "Manual close detected while locked; unlocking and updating state to CLOSED"
+            - logger.log: "Flapper closed while cover state was OPEN; updating state to CLOSED"
             - cover.template.publish:
                 id: my_cover
                 state: CLOSED
-            - switch.turn_off: lock_cover_state
+            - if:
+                condition:
+                  - switch.is_on: lock_cover_state  # If the cover is locked...
+                then:
+                  - logger.log: "Manual close detected while locked; unlocking"
+                  - switch.turn_off: lock_cover_state
 
 # The cover's motor is controlled by a DRV8833 dual H-bridge motor driver.
 fan:
@@ -133,6 +163,11 @@ cover:
     id: my_cover
     optimistic: false
     open_action:
+      # De-energize the motor before doing anything. If this command interrupted a close
+      # that was driving the motor, the interrupted script never reached its own fan off
+      # step, so the H-bridge can be left stranded with the motor still energized.
+      - logger.log: "Open requested; de-energizing motor before starting (clears any stranded H-bridge state)"
+      - fan.turn_off: drv8833_internal
       - if:
           condition:
             switch.is_off: lock_cover_state
@@ -146,6 +181,9 @@ cover:
                   - cover.template.publish:
                       id: my_cover
                       state: OPEN
+                  - globals.set:
+                      id: motor_last_cmd_ms
+                      value: !lambda 'return millis();'
                   - fan.turn_on:
                       id: drv8833_internal
                       direction: forward
@@ -155,91 +193,136 @@ cover:
           else:
             - logger.log: "Cover locked; ignoring open command"
     close_action:
+      # If a close is already actively driving the motor, ignore this command. A duplicate
+      # close (double-tap in HA, MQTT plus HA, etc.) would otherwise interrupt the
+      # in-progress close between the motor on and off steps, stranding the H-bridge with
+      # the motor still energized against the closed flapper. A close arriving when the
+      # motor is off (or the last motor command is stale) proceeds normally and
+      # de-energizes first, which also self-heals any stranded state.
       - if:
           condition:
-            switch.is_off: lock_cover_state
+            - not:
+                - fan.is_on: drv8833_internal  # The motor is currently energized...
+                - lambda: 'return (millis() - id(motor_last_cmd_ms)) < 1500;' # ...and the last motor command was recent (a close is in progress)...
           then:
-            # Try to gently close the cover first.
+            # De-energize the motor before doing anything so any stranded H-bridge state
+            # left by an interrupted command is cleared before we drive the motor again.
+            - logger.log: "Close requested; de-energizing motor before starting (clears any stranded H-bridge state)"
+            - fan.turn_off: drv8833_internal
             - if:
                 condition:
-                  binary_sensor.is_on: flapper_state  # The flapper is currently open
+                  switch.is_off: lock_cover_state
                 then:
-                  - fan.turn_on:
-                      id: drv8833_internal
-                      direction: reverse
-                      speed: 50
-                  - delay: 600ms  # 400ms isn't long enough at half speed
-                  - fan.turn_off: drv8833_internal
-            # If it's still open, make a few more "soft" attempts to close. A slight delay between each attempt
-            # should help "scare off" any cat that might be blocking it.
-            - if:
-                condition:
-                  binary_sensor.is_on: flapper_state  # If the flapper is still open
-                then: 
-                  - repeat:
-                      count: !lambda 'return (int)id(soft_close_attempts).state;' # Get the number of attempts from the user-configurable template number
+                  # Try to gently close the cover first.
+                  - if:
+                      condition:
+                        binary_sensor.is_on: flapper_state  # The flapper is currently open
                       then:
-                        - if:
-                            condition:
-                              binary_sensor.is_on: flapper_state  # Is Open
+                        - globals.set:
+                            id: motor_last_cmd_ms
+                            value: !lambda 'return millis();'
+                        - fan.turn_on:
+                            id: drv8833_internal
+                            direction: reverse
+                            speed: 50
+                        - delay: 600ms  # 400ms isn't long enough at half speed
+                        - fan.turn_off: drv8833_internal
+                  # If it's still open, make a few more "soft" attempts to close. A slight delay between each attempt
+                  # should help "scare off" any cat that might be blocking it.
+                  - if:
+                      condition:
+                        binary_sensor.is_on: flapper_state  # If the flapper is still open
+                      then: 
+                        - repeat:
+                            count: !lambda 'return (int)id(soft_close_attempts).state;' # Get the number of attempts from the user-configurable template number
                             then:
-                              - fan.turn_on:
-                                  id: drv8833_internal
-                                  direction: reverse
-                                  speed: 50
-                              - delay: 600ms
-                              - fan.turn_off: drv8833_internal
-                              - wait_until:
-                                  timeout: 1s
+                              - if:
                                   condition:
-                                    binary_sensor.is_off: flapper_state  # Is Closed
-            # If the cover is still open, engage the auto-lock mechanism and get more aggressive with it, open all
-            # the way first - then try to close again with 100% power.
-            - if:
-                condition:
-                  binary_sensor.is_on: flapper_state  # If the flapper is still open
-                then: 
-                  - repeat:
-                      count: !lambda 'return (int)id(aggressive_close_attempts).state;' # Get the number of attempts from the user-configurable template number
+                                    binary_sensor.is_on: flapper_state  # Is Open
+                                  then:
+                                    - globals.set:
+                                        id: motor_last_cmd_ms
+                                        value: !lambda 'return millis();'
+                                    - fan.turn_on:
+                                        id: drv8833_internal
+                                        direction: reverse
+                                        speed: 50
+                                    - delay: 600ms
+                                    - fan.turn_off: drv8833_internal
+                                    - wait_until:
+                                        timeout: 1s
+                                        condition:
+                                          binary_sensor.is_off: flapper_state  # Is Closed
+                  # If the cover is still open, engage the auto-lock mechanism and get more aggressive with it, open all
+                  # the way first - then try to close again with 100% power.
+                  - if:
+                      condition:
+                        binary_sensor.is_on: flapper_state  # If the flapper is still open
+                      then: 
+                        - repeat:
+                            count: !lambda 'return (int)id(aggressive_close_attempts).state;' # Get the number of attempts from the user-configurable template number
+                            then:
+                              - if:
+                                  condition:
+                                    binary_sensor.is_on: flapper_state  # Is Open
+                                  then:
+                                    - globals.set:
+                                        id: motor_last_cmd_ms
+                                        value: !lambda 'return millis();'
+                                    - fan.turn_on:
+                                        id: drv8833_internal
+                                        direction: forward
+                                        speed: 100
+                                    - delay: 400ms
+                                    - globals.set:
+                                        id: motor_last_cmd_ms
+                                        value: !lambda 'return millis();'
+                                    - fan.turn_on:
+                                        id: drv8833_internal
+                                        direction: reverse
+                                        speed: 100
+                                    - delay: 400ms
+                                    - fan.turn_off: drv8833_internal
+                                    - wait_until:
+                                        timeout: 500ms
+                                        condition:
+                                          binary_sensor.is_off: flapper_state  # Is Closed
+                        # Engage the auto-lock after we've exhausted all attempts to close. If we do it before the attempts, the "on_state"
+                        # logic of the binary sensor will "unlock" the cover thinking it was manually closed.
+                        - switch.turn_on: auto_lock_cover_state
+                  - if:
+                      condition:
+                        binary_sensor.is_off: flapper_state  # Is Closed
                       then:
-                        - if:
-                            condition:
-                              binary_sensor.is_on: flapper_state  # If the flapper is still open
-                            then:
-                              - fan.turn_on:
-                                  id: drv8833_internal
-                                  direction: forward
-                                  speed: 100
-                              - delay: 400ms
-                              - fan.turn_on:
-                                  id: drv8833_internal
-                                  direction: reverse
-                                  speed: 100
-                              - delay: 400ms
-                              - fan.turn_off: drv8833_internal
-                              - wait_until:
-                                  timeout: 500ms
-                                  condition:
-                                    binary_sensor.is_off: flapper_state  # Is Closed
-                  # Engage the auto-lock after we've exhausted all attempts to close. If we do it before the attempts, the "on_state"
-                  # logic of the binary sensor will "unlock" the cover thinking it was manually closed.
-                  - switch.turn_on: auto_lock_cover_state
-            - if:
-                condition:
-                  binary_sensor.is_off: flapper_state  # Is Closed
-                then:
-                  - cover.template.publish:
-                      id: my_cover
-                      state: CLOSED
-                  - logger.log: "Cover closed successfully, starting post-close delay timer"
-                  - delay: !lambda 'return (int)id(post_close_delay).state * 1000;' # Get the post-close delay from the user-configurable template number and convert to milliseconds
-                  - logger.log: "Post-close delay complete"
+                        - cover.template.publish:
+                            id: my_cover
+                            state: CLOSED
+                        - logger.log: "Cover closed successfully, starting post-close delay timer"
+                        - delay: !lambda 'return (int)id(post_close_delay).state * 1000;' # Get the post-close delay from the user-configurable template number and convert to milliseconds
+                        - logger.log: "Post-close delay complete"
+                      else:
+                        - logger.log: "Close timeout: flapper_state did not reach expected state after 100 attempts"            
                 else:
-                  - logger.log: "Close timeout: flapper_state did not reach expected state after 100 attempts"            
+                  - logger.log: "Cover locked; ignoring close command"
           else:
-            - logger.log: "Cover locked; ignoring close command"
+            - logger.log: "Close requested while a close is already driving the motor; ignoring duplicate"
     stop_action:
       - fan.turn_off: drv8833_internal
+
+# Watchdog: if the motor is still energized well after the last motor command, the
+# H-bridge was stranded by an interrupted open/close command. De-energize it to prevent
+# the motor from stalling and burning out. The longest legitimate motor run is 800ms
+# (one aggressive close iteration), so anything older than 2s is always a stranded state.
+interval:
+  - interval: 500ms
+    then:
+      - if:
+          condition:
+            - fan.is_on: drv8833_internal  # The motor is energized...
+            - lambda: 'return (millis() - id(motor_last_cmd_ms)) > 2000;' # ...but no motor command has been issued for 2s...
+          then:
+            - logger.log: "Motor watchdog: motor energized with no active command; de-energizing to prevent stalled-motor damage"
+            - fan.turn_off: drv8833_internal
 
 # MQTT Configuration for easy/legacy integration with Blue Iris alert triggers.
 mqtt:
